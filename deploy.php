@@ -11,12 +11,18 @@
 
 // ===== CONFIGURATION =====
 // Load secure deployment configuration
-$deploy_config = __DIR__ . '/config/.env.deploy';
+$deploy_config = __DIR__ . '/config/deploy_config.php';
 if (!file_exists($deploy_config)) {
-    http_response_code(500);
-    die('Deployment configuration not found. Copy config/EXAMPLE.env.deploy to config/.env.deploy');
+    // Fallback check for old .env style
+    if (file_exists(__DIR__ . '/config/.env.deploy')) {
+        require_once __DIR__ . '/config/.env.deploy';
+    } else {
+        http_response_code(500);
+        die('Deployment configuration not found. Please upload config/deploy_config.php');
+    }
+} else {
+    require_once $deploy_config;
 }
-require_once $deploy_config;
 
 // Use constants from config file
 $GITHUB_SECRET = GITHUB_WEBHOOK_SECRET;
