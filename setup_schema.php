@@ -1,66 +1,64 @@
 <?php
 // setup_schema.php
-require 'config.php';
+// MASTER MIGRATION SCRIPT
+// Upload and run this to create ALL necessary tables in one go.
+
+include 'config.php';
 
 try {
-    // 1. Create Admins Table
-    $pdo->exec("CREATE TABLE IF NOT EXISTS admins (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(50) NOT NULL UNIQUE,
-        password_hash VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
-    echo "Table 'admins' checked/created.<br>";
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // 2. Create Slots Table
-    $pdo->exec("CREATE TABLE IF NOT EXISTS slots (
+    // 1. Create SLOTS table
+    $sql_slots = "CREATE TABLE IF NOT EXISTS slots (
         id INT AUTO_INCREMENT PRIMARY KEY,
         slot_datetime DATETIME NOT NULL,
-        target_audience ENUM('kid', 'adult') NOT NULL,
-        max_capacity INT NOT NULL,
+        max_capacity INT DEFAULT 1,
+        target_audience VARCHAR(50) DEFAULT 'Adult (H)',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
+    )";
+    $pdo->exec($sql_slots);
     echo "Table 'slots' checked/created.<br>";
 
-    // 3. Create Bookings Table
-    $pdo->exec("CREATE TABLE IF NOT EXISTS bookings (
+    // 2. Create BOOKINGS table
+    $sql_bookings = "CREATE TABLE IF NOT EXISTS bookings (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        slot_id INT NOT NULL,
+        slot_id INT NULL,
         name VARCHAR(100) NOT NULL,
         contact_info VARCHAR(255) NOT NULL,
         english_level VARCHAR(50),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (slot_id) REFERENCES slots(id) ON DELETE CASCADE
-    )");
+        booking_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (slot_id) REFERENCES slots(id) ON DELETE SET NULL
+    )";
+    $pdo->exec($sql_bookings);
     echo "Table 'bookings' checked/created.<br>";
 
-    // 4. Insert Default Admin User
-    // User: admin, Pass: password123
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM admins WHERE username = 'admin'");
-    $stmt->execute();
-    if ($stmt->fetchColumn() == 0) {
-        $passHash = password_hash('password123', PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO admins (username, password_hash) VALUES ('admin', ?)");
-        $stmt->execute([$passHash]);
-        echo "Default admin user created (User: admin, Pass: password123).<br>";
-    } else {
-        echo "Default admin user already exists.<br>";
-    }
-    
-    // Optional: Insert some dummy slots for testing if empty
-    $stmt = $pdo->query("SELECT COUNT(*) FROM slots");
-    if ($stmt->fetchColumn() == 0) {
-        $tomorrow = date('Y-m-d H:i:s', strtotime('+1 day 10:00:00'));
-        $dayAfter = date('Y-m-d H:i:s', strtotime('+2 days 15:00:00'));
-        
-        $pdo->exec("INSERT INTO slots (slot_datetime, target_audience, max_capacity) VALUES 
-            ('$tomorrow', 'kid', 6),
-            ('$dayAfter', 'adult', 4)
-        ");
-        echo "Dummy slots inserted for testing.<br>";
-    }
+    // 3. Create SETTINGS table
+    $sql_settings = "CREATE TABLE IF NOT EXISTS settings (
+        setting_key VARCHAR(50) PRIMARY KEY,
+        setting_value TEXT
+    )";
+    $pdo->exec($sql_settings);
+    echo "Table 'settings' checked/created.<br>";
 
-    echo "Database setup completed successfully.";
+    // 4. Populate Default Settings (including cc_email)
+    $stmt = $pdo->prepare("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES (?, ?)");
+    
+    $defaults = [
+        'smtp_host' => 'smtp.example.com',
+        'smtp_port' => '587',
+        'smtp_user' => 'user@example.com',
+        'smtp_pass' => '',
+        'from_email' => 'noreply@schoolcontact.com',
+        'admin_email' => 'admin@schoolcontact.com',
+        'admin_cc_email' => ''
+    ];
+
+    foreach ($defaults as $key => $val) {
+        $stmt->execute([$key, $val]);
+    }
+    echo "Default settings populated.<br>";
+    
+    echo "<h2 style='color:green'>Database Setup Complete!</h2>";
 
 } catch (PDOException $e) {
     die("Setup failed: " . $e->getMessage());
