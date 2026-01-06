@@ -39,7 +39,7 @@ define('ADMIN_EMAIL', $settings['admin_email'] ?? 'admin@schoolcontact.com');
 define('ADMIN_CC_EMAIL', $settings['admin_cc_email'] ?? '');
 
 // Start Session for all pages that include config
-if (session_status() == PHP_SESSION_NONE) {
+if (session_status() == PHP_SESSION_NONE && !headers_sent()) {
     session_start();
 }
 
