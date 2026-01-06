@@ -33,7 +33,7 @@ $GITHUB_BRANCH = GITHUB_BRANCH;
 // Directories to preserve (won't be overwritten)
 // config.php is preserved so database credentials aren't overwritten
 $PRESERVE_FILES = ['config.php'];
-$PRESERVE_DIRS = ['config', 'images']; // Preserve config folder (for .env.deploy) and images (if user uploads any)
+$PRESERVE_DIRS = ['config']; // Preserve config folder (for .env.deploy/deploy_config.php)
 
 // ===== END CONFIGURATION =====
 
