@@ -174,7 +174,8 @@ $csrf_token = generateCsrfToken();
             const grades = [
                 { label: '幼稚園 (Kindergarten)', val: 'Kindergarten', audiences: ['Kids New', 'Kids (C)'] },
                 { label: '小学1年生 (1st Grade)', val: '1st Grade', audiences: ['Kids (C)'] },
-                { label: '2年生 / 3年生 (2nd/3rd Grade)', val: '2nd/3rd Grade', audiences: ['Kids (B)'] },
+                { label: '2年生 (2nd Grade)', val: '2nd Grade', audiences: ['Kids (B)'] },
+                { label: '3年生 (3rd Grade)', val: '3rd Grade', audiences: ['Kids (B)'] },
                 { label: '4年生 (4th Grade)', val: '4th Grade', audiences: ['Kids (B2)'] },
                 { label: '5年生 / 6年生 (5th/6th Grade)', val: '5th/6th Grade', audiences: ['Kids (A)'] },
                 { label: '中学生 (Jr. High)', val: 'Jr. High', audiences: ['Jr. High'] },
