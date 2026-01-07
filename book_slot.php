@@ -43,10 +43,14 @@ if (empty($name) || empty($email) || empty($phone)) {
 try {
     $pdo->beginTransaction();
 
-    // If there is a slot_id, check capacity
+    // Variable to store slot datetime for emails
+    $slotDatetime = null;
+    $slotDisplayStr = null;
+
+    // If there is a slot_id, check capacity and get datetime
     if ($slot_id) {
         $stmt = $pdo->prepare("
-            SELECT s.max_capacity, COUNT(b.id) as current_bookings
+            SELECT s.slot_datetime, s.max_capacity, COUNT(b.id) as current_bookings
             FROM slots s
             LEFT JOIN bookings b ON s.id = b.slot_id
             WHERE s.id = :id
@@ -62,6 +66,10 @@ try {
         if ($slot['current_bookings'] >= $slot['max_capacity']) {
             throw new Exception('Slot is full');
         }
+
+        // Store the datetime for use in emails
+        $slotDatetime = new DateTime($slot['slot_datetime']);
+        $slotDisplayStr = $slotDatetime->format('Y年n月j日 (D) H:i');
     }
 
     // Insert Booking or Waitlist
@@ -79,46 +87,119 @@ try {
 
     $pdo->commit();
 
-    // Email Logic
-    $to = ADMIN_EMAIL;
-    $subject = $slot_id ? "New Booking Receipt" : "New WAITLIST Inquiry";
+    // ========================================
+    // EMAIL 1: Admin Notification
+    // ========================================
+    $adminTo = ADMIN_EMAIL;
+    $adminSubject = $slot_id ? "【新規予約】New Booking Receipt" : "【ウェイトリスト】New WAITLIST Inquiry";
     
-    // Construct Message
-    $messageBody = "New " . ($slot_id ? "Booking" : "Waitlist Request") . "\n\n";
-    if ($slot_id) $messageBody .= "Slot ID: $slot_id\n";
-    $messageBody .= "Name: $name\n";
-    $messageBody .= "Email: $email\n";
-    $messageBody .= "Phone: $phone\n";
-    $messageBody .= "Level/Grade: $level\n";
-    $messageBody .= "\nView in Dashboard: " . "http://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . "/admin/dashboard.php";
+    // Construct Admin Message
+    $adminMessage = "New " . ($slot_id ? "Booking" : "Waitlist Request") . "\n";
+    $adminMessage .= "新しい" . ($slot_id ? "予約" : "ウェイトリストリクエスト") . "\n\n";
+    
+    if ($slot_id && $slotDisplayStr) {
+        $adminMessage .= "予約日時 / Date & Time: $slotDisplayStr\n";
+    }
+    $adminMessage .= "お名前 / Name: $name\n";
+    $adminMessage .= "メール / Email: $email\n";
+    $adminMessage .= "電話 / Phone: $phone\n";
+    $adminMessage .= "レベル / Level/Grade: $level\n";
+    $adminMessage .= "\n管理画面 / Dashboard: " . "http://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . "/admin/dashboard.php";
 
-    // Headers
-    $headers = [
+    // Admin Headers
+    $adminHeaders = [
         'From' => FROM_EMAIL,
-        'Reply-To' => FROM_EMAIL,
-        'X-Mailer' => 'PHP/' . phpversion()
+        'Reply-To' => $email, // Reply goes to the student
+        'X-Mailer' => 'PHP/' . phpversion(),
+        'Content-Type' => 'text/plain; charset=UTF-8'
     ];
     
     // Add CC if configured
     if (defined('ADMIN_CC_EMAIL') && ADMIN_CC_EMAIL !== '') {
-        $headers['Cc'] = ADMIN_CC_EMAIL;
+        $adminHeaders['Cc'] = ADMIN_CC_EMAIL;
     }
 
     // Convert headers array to string
-    $headersString = '';
-    foreach ($headers as $key => $value) {
-        $headersString .= "$key: $value\r\n";
+    $adminHeadersString = '';
+    foreach ($adminHeaders as $key => $value) {
+        $adminHeadersString .= "$key: $value\r\n";
     }
 
-    // Try to send email (basic PHP mail)
-    // Note: This requires a working mail server or Sendmail configuration in php.ini
-    $mailSent = mail($to, $subject, $messageBody, $headersString);
+    // Send Admin Email
+    $adminMailSent = mail($adminTo, $adminSubject, $adminMessage, $adminHeadersString);
     
-    if (!$mailSent) {
-        // Fallback logging if mail fails (common in local dev without SMTP)
-        error_log("Mail() failed. simulated to: $to, CC: " . (defined('ADMIN_CC_EMAIL') ? ADMIN_CC_EMAIL : 'none') . " Message: $messageBody");
+    if (!$adminMailSent) {
+        error_log("Admin Mail() failed. To: $adminTo, Message: $adminMessage");
     } else {
-        error_log("Mail sent to $to, CC: " . (defined('ADMIN_CC_EMAIL') ? ADMIN_CC_EMAIL : 'none'));
+        error_log("Admin Mail sent to $adminTo");
+    }
+
+    // ========================================
+    // EMAIL 2: Student Confirmation
+    // ========================================
+    $studentSubject = $slot_id 
+        ? "【予約確認】無料体験レッスンのご予約ありがとうございます / Booking Confirmation" 
+        : "【受付完了】お問い合わせありがとうございます / Inquiry Received";
+    
+    // Construct Student Message (Bilingual: Japanese first, then English)
+    $studentMessage = "";
+    
+    if ($slot_id && $slotDisplayStr) {
+        // Confirmed booking
+        $studentMessage .= "$name 様\n\n";
+        $studentMessage .= "この度は無料体験レッスンをご予約いただき、誠にありがとうございます。\n";
+        $studentMessage .= "以下の内容でご予約を承りました。\n\n";
+        $studentMessage .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $studentMessage .= "【ご予約内容】\n";
+        $studentMessage .= "日時: $slotDisplayStr\n";
+        $studentMessage .= "レベル: $level\n";
+        $studentMessage .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        $studentMessage .= "当日はお気をつけてお越しください。\n";
+        $studentMessage .= "ご質問がございましたら、お気軽にご連絡ください。\n\n";
+        $studentMessage .= "---\n\n";
+        $studentMessage .= "Dear $name,\n\n";
+        $studentMessage .= "Thank you for booking a free trial lesson.\n";
+        $studentMessage .= "Your reservation has been confirmed as follows:\n\n";
+        $studentMessage .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $studentMessage .= "【Booking Details】\n";
+        $studentMessage .= "Date & Time: " . $slotDatetime->format('F j, Y (D) H:i') . "\n";
+        $studentMessage .= "Level: $level\n";
+        $studentMessage .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        $studentMessage .= "We look forward to seeing you!\n";
+        $studentMessage .= "If you have any questions, please feel free to contact us.\n";
+    } else {
+        // Waitlist
+        $studentMessage .= "$name 様\n\n";
+        $studentMessage .= "この度はお問い合わせいただき、誠にありがとうございます。\n";
+        $studentMessage .= "現在、ご希望のクラスに空きがないため、ウェイトリストに登録させていただきました。\n";
+        $studentMessage .= "空きが出次第、ご連絡いたします。\n\n";
+        $studentMessage .= "---\n\n";
+        $studentMessage .= "Dear $name,\n\n";
+        $studentMessage .= "Thank you for your inquiry.\n";
+        $studentMessage .= "We have added you to our waitlist and will contact you as soon as an opening becomes available.\n";
+    }
+
+    // Student Headers
+    $studentHeaders = [
+        'From' => FROM_EMAIL,
+        'Reply-To' => FROM_EMAIL,
+        'X-Mailer' => 'PHP/' . phpversion(),
+        'Content-Type' => 'text/plain; charset=UTF-8'
+    ];
+
+    // Convert headers array to string
+    $studentHeadersString = '';
+    foreach ($studentHeaders as $key => $value) {
+        $studentHeadersString .= "$key: $value\r\n";
+    }
+
+    // Send Student Confirmation Email
+    $studentMailSent = mail($email, $studentSubject, $studentMessage, $studentHeadersString);
+    
+    if (!$studentMailSent) {
+        error_log("Student Mail() failed. To: $email");
+    } else {
+        error_log("Student confirmation email sent to $email");
     }
 
     echo json_encode(['success' => true, 'message' => 'Confirmed!']);
