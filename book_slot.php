@@ -40,6 +40,17 @@ if (empty($name) || empty($email) || empty($phone)) {
     exit;
 }
 
+// Auto-migrate: Add phone column if it doesn't exist
+try {
+    $checkColumn = $pdo->query("SHOW COLUMNS FROM bookings LIKE 'phone'");
+    if ($checkColumn->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE bookings ADD COLUMN phone VARCHAR(50) AFTER contact_info");
+    }
+} catch (PDOException $e) {
+    // Log but don't fail - column might already exist
+    error_log("book_slot.php: Could not check/add phone column: " . $e->getMessage());
+}
+
 try {
     $pdo->beginTransaction();
 

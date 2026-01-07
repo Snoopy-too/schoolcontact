@@ -2,9 +2,7 @@
 // admin/dashboard.php
 require '../config.php';
 
-// Temporary error display for debugging (remove in production)
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+
 error_reporting(E_ALL);
 
 // Auto-migrate: Add phone column if it doesn't exist
