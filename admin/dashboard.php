@@ -50,6 +50,7 @@ $t = [
         'error' => 'Error occurred.',
         'delete' => 'Delete',
         'bulk_delete' => 'Delete Selected',
+        'day' => 'Day',
         'booked_cap' => 'Booked/Cap',
         'clear_all' => 'Clear All',
         'confirm_clear_slots' => 'WARNING: This will delete ALL future slots AND their associated bookings. This cannot be undone. Are you sure?',
@@ -80,6 +81,7 @@ $t = [
         'error' => 'エラーが発生しました。',
         'delete' => '削除',
         'bulk_delete' => '選択した項目を削除',
+        'day' => '曜日',
         'booked_cap' => '予約/定員',
         'clear_all' => '全て削除',
         'confirm_clear_slots' => '警告：すべての将来の枠とそれに関連する予約を削除します。この操作は取り消せません。よろしいですか？',
@@ -468,6 +470,7 @@ $bookings = $bookingsStmt->fetchAll();
                     <tr>
                         <th style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleAll(this)"></th>
                         <th><?php echo sortLink('slot_datetime', $txt['date'] . '/' . $txt['time'], $sort, $order, $lang, $page); ?></th>
+                        <th><?php echo $txt['day']; ?></th>
                         <th><?php echo sortLink('target_audience', $txt['audience'], $sort, $order, $lang, $page); ?></th>
                         <th><?php echo sortLink('booked_count', $txt['booked_cap'], $sort, $order, $lang, $page); ?></th>
                         <th style="width: 100px;"><?php echo $lang == 'en' ? 'Actions' : '操作'; ?></th>
@@ -483,6 +486,13 @@ $bookings = $bookingsStmt->fetchAll();
                         <tr>
                             <td><input type="checkbox" name="slot_ids[]" value="<?php echo $slot['id']; ?>" onclick="updateCounter()"></td>
                             <td><?php echo $slot['slot_datetime']; ?></td>
+                            <td><?php 
+                                $days = [
+                                    'en' => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+                                    'jp' => ['日','月','火','水','木','金','土']
+                                ];
+                                echo $days[$lang][$slotDt->format('w')]; 
+                            ?></td>
                             <td><?php echo $slot['target_audience']; ?></td>
                             <td>
                                 <span class="badge <?php echo $slot['booked_count'] >= $slot['max_capacity'] ? 'bg-danger' : 'bg-info'; ?>">
