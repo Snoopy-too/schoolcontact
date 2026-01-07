@@ -26,7 +26,8 @@ $t = [
         'adult' => 'Adults',
         'create' => 'Create',
         'name' => 'Name',
-        'contact' => 'Contact',
+        'email' => 'Email',
+        'phone' => 'Phone',
         'level' => 'Level',
         'start_date' => 'Start Date',
         'end_date' => 'End Date',
@@ -55,7 +56,8 @@ $t = [
         'adult' => '大人',
         'create' => '作成',
         'name' => '名前',
-        'contact' => '連絡先',
+        'email' => 'メール',
+        'phone' => '電話',
         'level' => 'レベル',
         'start_date' => '開始日',
         'end_date' => '終了日',
@@ -235,7 +237,7 @@ $bookingsStmt = $pdo->query("
     SELECT b.*, s.slot_datetime, s.target_audience 
     FROM bookings b 
     LEFT JOIN slots s ON b.slot_id = s.id 
-    ORDER BY s.slot_datetime ASC
+    ORDER BY b.booking_time DESC
 ");
 $bookings = $bookingsStmt->fetchAll();
 
@@ -466,14 +468,15 @@ $bookings = $bookingsStmt->fetchAll();
                     <th><?php echo $txt['date']; ?></th>
                     <th><?php echo $txt['time']; ?></th>
                     <th><?php echo $txt['name']; ?></th>
-                    <th><?php echo $txt['contact']; ?></th>
+                    <th><?php echo $txt['email']; ?></th>
+                    <th><?php echo $txt['phone']; ?></th>
                     <th><?php echo $txt['level']; ?></th>
                     <th>Type</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if(empty($bookings)): ?>
-                    <tr><td colspan="7" class="text-center">No bookings yet.</td></tr>
+                    <tr><td colspan="8" class="text-center">No bookings yet.</td></tr>
                 <?php else: ?>
                     <?php foreach($bookings as $b): 
                         if ($b['slot_datetime']) {
@@ -493,6 +496,7 @@ $bookings = $bookingsStmt->fetchAll();
                         <td><?php echo $timeStr; ?></td>
                         <td><?php echo htmlspecialchars($b['name']); ?></td>
                         <td><?php echo htmlspecialchars($b['contact_info']); ?></td>
+                        <td><?php echo htmlspecialchars($b['phone'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars($b['english_level']); ?></td>
                         <td>
                             <span class="badge bg-secondary"><?php echo $typeStr; ?></span>

@@ -29,13 +29,14 @@ if (!empty($input['website'])) {
 // slot_id is optional (NULL allowed for Waitlist)
 $slot_id = isset($input['slot_id']) ? filter_var($input['slot_id'], FILTER_VALIDATE_INT) : null;
 $name = trim($input['name'] ?? '');
-$contact = trim($input['contact'] ?? '');
+$email = trim($input['email'] ?? '');
+$phone = trim($input['phone'] ?? '');
 $level = trim($input['level'] ?? ''); // Can store grade or level here
 $type = trim($input['type'] ?? 'Booking'); // 'Booking' or 'Waitlist'
 
-if (empty($name) || empty($contact)) {
+if (empty($name) || empty($email) || empty($phone)) {
     http_response_code(400);
-    echo json_encode(['error' => 'Missing required fields']);
+    echo json_encode(['error' => 'Missing required fields (name, email, and phone are required)']);
     exit;
 }
 
@@ -65,13 +66,14 @@ try {
 
     // Insert Booking or Waitlist
     $insertStmt = $pdo->prepare("
-        INSERT INTO bookings (slot_id, name, contact_info, english_level)
-        VALUES (:slot_id, :name, :contact, :level)
+        INSERT INTO bookings (slot_id, name, contact_info, phone, english_level)
+        VALUES (:slot_id, :name, :email, :phone, :level)
     ");
     $insertStmt->execute([
         'slot_id' => $slot_id, // Can be NULL
         'name' => $name,
-        'contact' => $contact,
+        'email' => $email,
+        'phone' => $phone,
         'level' => $level
     ]);
 
@@ -85,7 +87,8 @@ try {
     $messageBody = "New " . ($slot_id ? "Booking" : "Waitlist Request") . "\n\n";
     if ($slot_id) $messageBody .= "Slot ID: $slot_id\n";
     $messageBody .= "Name: $name\n";
-    $messageBody .= "Contact: $contact\n";
+    $messageBody .= "Email: $email\n";
+    $messageBody .= "Phone: $phone\n";
     $messageBody .= "Level/Grade: $level\n";
     $messageBody .= "\nView in Dashboard: " . "http://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . "/admin/dashboard.php";
 

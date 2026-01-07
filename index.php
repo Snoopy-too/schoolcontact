@@ -100,8 +100,12 @@ $csrf_token = generateCsrfToken();
                                 <input type="text" class="form-control" id="name" name="name" required placeholder="山田 太郎">
                             </div>
                             <div class="mb-3">
-                                <label for="contact" class="form-label">連絡先 (Email or Phone)</label>
-                                <input type="text" class="form-control" id="contact" name="contact" required placeholder="email@example.com / 090-1234-5678">
+                                <label for="email" class="form-label">メールアドレス (Email) <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="email" name="email" required placeholder="email@example.com">
+                            </div>
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">電話番号 (Phone) <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" id="phone" name="phone" required placeholder="090-1234-5678">
                             </div>
                             
                             <div class="alert alert-info small" id="confirmationNote">
@@ -274,7 +278,8 @@ $csrf_token = generateCsrfToken();
             slot_id: $('#inputSlotId').val(), // Can be empty
             level: $('#inputLevel').val(),   // Contains Grade or Level
             name: $('#name').val(),
-            contact: $('#contact').val()
+            email: $('#email').val(),
+            phone: $('#phone').val()
         };
 
         $.ajax({

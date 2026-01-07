@@ -25,12 +25,24 @@ try {
         slot_id INT NULL,
         name VARCHAR(100) NOT NULL,
         contact_info VARCHAR(255) NOT NULL,
+        phone VARCHAR(50),
         english_level VARCHAR(50),
         booking_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (slot_id) REFERENCES slots(id) ON DELETE SET NULL
     )";
     $pdo->exec($sql_bookings);
     echo "Table 'bookings' checked/created.<br>";
+
+    // Add phone column if it doesn't exist (for existing installations)
+    try {
+        $pdo->exec("ALTER TABLE bookings ADD COLUMN phone VARCHAR(50) AFTER contact_info");
+        echo "Column 'phone' added to bookings table.<br>";
+    } catch (PDOException $e) {
+        // Column likely already exists - ignore
+        if (strpos($e->getMessage(), 'Duplicate column') === false) {
+            echo "Note: phone column may already exist.<br>";
+        }
+    }
 
     // 3. Create SETTINGS table
     $sql_settings = "CREATE TABLE IF NOT EXISTS settings (
