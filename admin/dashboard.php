@@ -2,6 +2,22 @@
 // admin/dashboard.php
 require '../config.php';
 
+// Temporary error display for debugging (remove in production)
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Auto-migrate: Add phone column if it doesn't exist
+try {
+    $checkColumn = $pdo->query("SHOW COLUMNS FROM bookings LIKE 'phone'");
+    if ($checkColumn->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE bookings ADD COLUMN phone VARCHAR(50) AFTER contact_info");
+        error_log("Dashboard: Auto-added 'phone' column to bookings table.");
+    }
+} catch (PDOException $e) {
+    error_log("Dashboard: Could not check/add phone column: " . $e->getMessage());
+}
+
 // Auth Check
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     header("Location: login.php");
