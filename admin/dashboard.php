@@ -253,7 +253,7 @@ $bookingsStmt = $pdo->query("
     SELECT b.*, s.slot_datetime, s.target_audience 
     FROM bookings b 
     LEFT JOIN slots s ON b.slot_id = s.id 
-    ORDER BY b.booking_time DESC
+    ORDER BY b.id DESC
 ");
 $bookings = $bookingsStmt->fetchAll();
 
