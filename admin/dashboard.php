@@ -391,7 +391,7 @@ $bookings = $bookingsStmt->fetchAll();
                         <div class="row mb-2">
                             <div class="col">
                                 <label><?php echo $txt['start_date']; ?></label>
-                                <input type="date" name="start_date" class="form-control" required>
+                                <input type="date" name="start_date" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
                             </div>
                             <div class="col">
                                 <label><?php echo $txt['end_date']; ?></label>
