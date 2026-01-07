@@ -167,11 +167,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['bulk_delete_slots'])) {
         $ids = $_POST['slot_ids'] ?? [];
         if (!empty($ids)) {
-            $placeholders = implode(',', array_fill(0, count($ids), '?'));
-            $sql = "DELETE FROM slots WHERE id IN ($placeholders)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($ids);
-            $message = count($ids) . " slots deleted.";
+            try {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                
+                // Delete associated bookings first
+                $stmtDelBookings = $pdo->prepare("DELETE FROM bookings WHERE slot_id IN ($placeholders)");
+                $stmtDelBookings->execute($ids);
+                
+                // Delete slots
+                $stmtDelSlots = $pdo->prepare("DELETE FROM slots WHERE id IN ($placeholders)");
+                $stmtDelSlots->execute($ids);
+                
+                $message = count($ids) . " slots (and their bookings) deleted.";
+            } catch (PDOException $e) {
+                $message = "Error deleting slots: " . $e->getMessage();
+            }
+        }
+    }
+
+    // 5b. Single Delete Slot
+    if (isset($_POST['action']) && $_POST['action'] === 'delete_slot') {
+        $slotId = intval($_POST['slot_id']);
+        try {
+            // Delete associated bookings
+            $stmtDelBookings = $pdo->prepare("DELETE FROM bookings WHERE slot_id = ?");
+            $stmtDelBookings->execute([$slotId]);
+            
+            // Delete slot
+            $stmtDelSlots = $pdo->prepare("DELETE FROM slots WHERE id = ?");
+            $stmtDelSlots->execute([$slotId]);
+            
+            $message = "Slot deleted.";
+        } catch (PDOException $e) {
+            $message = "Error deleting slot: " . $e->getMessage();
         }
     }
 
@@ -431,18 +459,18 @@ $bookings = $bookingsStmt->fetchAll();
         </div>
     </div>
 
-    <form method="post" onsubmit="return confirm('Delete selected slots?');">
+    <form method="post" id="bulkDeleteForm">
         <input type="hidden" name="bulk_delete_slots" value="1">
         
         <div class="table-responsive mb-3 bg-white shadow-sm p-3">
             <table class="table table-sm">
                 <thead>
                     <tr>
-                        <th style="width: 40px;"><input type="checkbox" onclick="toggleAll(this)"></th>
+                        <th style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleAll(this)"></th>
                         <th><?php echo sortLink('slot_datetime', $txt['date'] . '/' . $txt['time'], $sort, $order, $lang, $page); ?></th>
                         <th><?php echo sortLink('target_audience', $txt['audience'], $sort, $order, $lang, $page); ?></th>
                         <th><?php echo sortLink('booked_count', $txt['booked_cap'], $sort, $order, $lang, $page); ?></th>
-                        <th style="width: 80px;"><?php echo $lang == 'en' ? 'Actions' : '操作'; ?></th>
+                        <th style="width: 100px;"><?php echo $lang == 'en' ? 'Actions' : '操作'; ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -453,7 +481,7 @@ $bookings = $bookingsStmt->fetchAll();
                             $slotDt = new DateTime($slot['slot_datetime']);
                         ?>
                         <tr>
-                            <td><input type="checkbox" name="slot_ids[]" value="<?php echo $slot['id']; ?>"></td>
+                            <td><input type="checkbox" name="slot_ids[]" value="<?php echo $slot['id']; ?>" onclick="updateCounter()"></td>
                             <td><?php echo $slot['slot_datetime']; ?></td>
                             <td><?php echo $slot['target_audience']; ?></td>
                             <td>
@@ -462,10 +490,16 @@ $bookings = $bookingsStmt->fetchAll();
                                 </span>
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-outline-primary" 
-                                    onclick="openEditModal(<?php echo $slot['id']; ?>, '<?php echo $slotDt->format('Y-m-d'); ?>', '<?php echo $slotDt->format('H:i'); ?>', '<?php echo htmlspecialchars($slot['target_audience'], ENT_QUOTES); ?>', <?php echo $slot['max_capacity']; ?>)">
-                                    ✏️
-                                </button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="openEditModal(<?php echo $slot['id']; ?>, '<?php echo $slotDt->format('Y-m-d'); ?>', '<?php echo $slotDt->format('H:i'); ?>', '<?php echo htmlspecialchars($slot['target_audience'], ENT_QUOTES); ?>', <?php echo $slot['max_capacity']; ?>)">
+                                        ✏️
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteSingleSlot(<?php echo $slot['id']; ?>)">
+                                        🗑️
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -474,8 +508,10 @@ $bookings = $bookingsStmt->fetchAll();
             </table>
         </div>
         
-        <div class="mb-5">
-            <button type="submit" class="btn btn-danger"><?php echo $txt['bulk_delete']; ?></button>
+        <div class="mb-5 d-flex justify-content-between align-items-center">
+            <button type="button" id="bulkDeleteBtn" class="btn btn-danger disabled" onclick="confirmBulkDelete()">
+                <?php echo $txt['bulk_delete']; ?> (<span id="selectedCount">0</span>)
+            </button>
             
             <!-- Pagination Controls -->
             <div class="btn-group float-end" role="group">
@@ -503,6 +539,12 @@ $bookings = $bookingsStmt->fetchAll();
             <button type="button" class="btn btn-danger btn-sm" onclick="showConfirmModal(this, '<?php echo htmlspecialchars($txt['confirm_clear_bookings'], ENT_QUOTES); ?>')"><?php echo $txt['clear_all']; ?></button>
         </form>
     </h3>
+
+    <!-- Hidden form for single deletion -->
+    <form method="post" id="singleDeleteForm" style="display:none;">
+        <input type="hidden" name="action" value="delete_slot">
+        <input type="hidden" name="slot_id" id="singleDeleteId">
+    </form>
     <div class="table-responsive bg-white shadow p-3">
         <table class="table table-striped table-hover">
             <thead>
@@ -642,10 +684,46 @@ $bookings = $bookingsStmt->fetchAll();
 
     // Toggle for checkboxes
     function toggleAll(source) {
-        checkboxes = document.getElementsByName('slot_ids[]');
+        let checkboxes = document.getElementsByName('slot_ids[]');
         for(var i=0, n=checkboxes.length;i<n;i++) {
             checkboxes[i].checked = source.checked;
         }
+        updateCounter();
+    }
+
+    function updateCounter() {
+        let checkboxes = document.getElementsByName('slot_ids[]');
+        let count = 0;
+        for(var i=0, n=checkboxes.length;i<n;i++) {
+            if(checkboxes[i].checked) count++;
+        }
+        document.getElementById('selectedCount').innerText = count;
+        
+        let btn = document.getElementById('bulkDeleteBtn');
+        if(count > 0) {
+            btn.classList.remove('disabled');
+        } else {
+            btn.classList.add('disabled');
+        }
+    }
+
+    function confirmBulkDelete() {
+        let count = document.querySelectorAll('input[name="slot_ids[]"]:checked').length;
+        if(count === 0) return;
+        
+        let msg = "<?php echo $lang == 'en' ? 'Are you sure you want to delete ' : '選択した '; ?>" + count + " <?php echo $lang == 'en' ? 'slots? This will also delete any bookings for these slots.' : '件の枠を削除しますか？これに関連する予約も削除されます。'; ?>";
+        showConfirmModal(document.getElementById('bulkDeleteBtn'), msg);
+    }
+
+    function deleteSingleSlot(id) {
+        document.getElementById('singleDeleteId').value = id;
+        let msg = "<?php echo $lang == 'en' ? 'Are you sure you want to delete this slot and its bookings?' : 'この枠と予約を削除してもよろしいですか？'; ?>";
+        
+        // Manually set formToSubmit and show modal
+        formToSubmit = document.getElementById('singleDeleteForm');
+        document.getElementById('confirmationMessage').innerText = msg;
+        var myModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+        myModal.show();
     }
 
     // Edit Slot Modal
