@@ -166,7 +166,7 @@ try {
         $studentMessage .= "レベル: $level\n";
         $studentMessage .= "━━━━━━━━━━━━━━━━━━━━\n\n";
         $studentMessage .= "当日はお気をつけてお越しください。\n";
-        $studentMessage .= "ご質問がございましたら、お気軽にご連絡ください。\n\n";
+        $studentMessage .= "ご質問がございましたら、お気軽にご連絡ください (pierenglish@yahoo.co.jp)。\n\n";
         $studentMessage .= "---\n\n";
         $studentMessage .= "Dear $name,\n\n";
         $studentMessage .= "Thank you for booking a free trial lesson.\n";
@@ -177,17 +177,19 @@ try {
         $studentMessage .= "Level: $level\n";
         $studentMessage .= "━━━━━━━━━━━━━━━━━━━━\n\n";
         $studentMessage .= "We look forward to seeing you!\n";
-        $studentMessage .= "If you have any questions, please feel free to contact us.\n";
+        $studentMessage .= "If you have any questions, please feel free to contact us (pierenglish@yahoo.co.jp).\n";
     } else {
         // Waitlist
         $studentMessage .= "$name 様\n\n";
         $studentMessage .= "この度はお問い合わせいただき、誠にありがとうございます。\n";
         $studentMessage .= "現在、ご希望のクラスに空きがないため、ウェイトリストに登録させていただきました。\n";
         $studentMessage .= "空きが出次第、ご連絡いたします。\n\n";
+        $studentMessage .= "ご質問がございましたら、お気軽にご連絡ください (pierenglish@yahoo.co.jp)。\n\n";
         $studentMessage .= "---\n\n";
         $studentMessage .= "Dear $name,\n\n";
         $studentMessage .= "Thank you for your inquiry.\n";
-        $studentMessage .= "We have added you to our waitlist and will contact you as soon as an opening becomes available.\n";
+        $studentMessage .= "We have added you to our waitlist and will contact you as soon as an opening becomes available.\n\n";
+        $studentMessage .= "If you have any questions, please feel free to contact us (pierenglish@yahoo.co.jp).\n";
     }
 
     // Student Headers
