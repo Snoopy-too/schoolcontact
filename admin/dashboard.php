@@ -350,7 +350,7 @@ $bookings = $bookingsStmt->fetchAll();
                             </div>
                             <div class="col">
                                 <label><?php echo $txt['time']; ?></label>
-                                <input type="time" name="time" class="form-control" required>
+                                <input type="time" name="time" class="form-control" value="19:00" required>
                             </div>
                         </div>
                         <div class="row mb-2">
@@ -413,7 +413,7 @@ $bookings = $bookingsStmt->fetchAll();
                             </div>
                             <div class="col">
                                 <label><?php echo $txt['time']; ?></label>
-                                <input type="time" name="time" class="form-control" required>
+                                <input type="time" name="time" class="form-control" value="19:00" required>
                             </div>
                         </div>
                         <div class="row mb-2">
