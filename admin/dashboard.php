@@ -360,10 +360,11 @@ $bookings = $bookingsStmt->fetchAll();
                                 <label><?php echo $txt['audience']; ?></label>
                                 <select name="audience" class="form-select">
                                     <option value="Kids New">Kids New</option>
-                                    <option value="Kids (C)">Kids (C)</option>
-                                    <option value="Kids (B)">Kids (B)</option>
-                                    <option value="Kids (B2)">Kids (B2)</option>
-                                    <option value="Kids (A)">Kids (A)</option>
+                                    <option value="Kids 1st">Kids 1st</option>
+                                    <option value="Kids 2nd">Kids 2nd</option>
+                                    <option value="Kids 3rd">Kids 3rd</option>
+                                    <option value="Kids 4th">Kids 4th</option>
+                                    <option value="Kids 5-6">Kids 5-6</option>
                                     <option value="Jr. High">Jr. High</option>
                                     <option value="High Sch">High Sch</option>
                                     <option value="Adult (L)">Adult (L)</option>
@@ -423,10 +424,11 @@ $bookings = $bookingsStmt->fetchAll();
                                 <label><?php echo $txt['audience']; ?></label>
                                 <select name="audience" class="form-select">
                                     <option value="Kids New">Kids New</option>
-                                    <option value="Kids (C)">Kids (C)</option>
-                                    <option value="Kids (B)">Kids (B)</option>
-                                    <option value="Kids (B2)">Kids (B2)</option>
-                                    <option value="Kids (A)">Kids (A)</option>
+                                    <option value="Kids 1st">Kids 1st</option>
+                                    <option value="Kids 2nd">Kids 2nd</option>
+                                    <option value="Kids 3rd">Kids 3rd</option>
+                                    <option value="Kids 4th">Kids 4th</option>
+                                    <option value="Kids 5-6">Kids 5-6</option>
                                     <option value="Jr. High">Jr. High</option>
                                     <option value="High Sch">High Sch</option>
                                     <option value="Adult (L)">Adult (L)</option>
@@ -649,10 +651,11 @@ $bookings = $bookingsStmt->fetchAll();
               <label class="form-label"><?php echo $txt['audience']; ?></label>
               <select name="edit_audience" id="editAudience" class="form-select">
                 <option value="Kids New">Kids New</option>
-                <option value="Kids (C)">Kids (C)</option>
-                <option value="Kids (B)">Kids (B)</option>
-                <option value="Kids (B2)">Kids (B2)</option>
-                <option value="Kids (A)">Kids (A)</option>
+                <option value="Kids 1st">Kids 1st</option>
+                <option value="Kids 2nd">Kids 2nd</option>
+                <option value="Kids 3rd">Kids 3rd</option>
+                <option value="Kids 4th">Kids 4th</option>
+                <option value="Kids 5-6">Kids 5-6</option>
                 <option value="Jr. High">Jr. High</option>
                 <option value="High Sch">High Sch</option>
                 <option value="Adult (L)">Adult (L)</option>
