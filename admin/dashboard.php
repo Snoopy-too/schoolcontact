@@ -144,7 +144,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = str_replace('Slots', "$count Slots", $txt['generated']);
     }
 
-    // 4. Bulk Delete Slots (Selected)
+    // 4. Edit Slot
+    if (isset($_POST['action']) && $_POST['action'] === 'edit_slot') {
+        $editId = intval($_POST['edit_slot_id']);
+        $editDate = $_POST['edit_date'];
+        $editTime = $_POST['edit_time'];
+        $editAudience = $_POST['edit_audience'];
+        $editCapacity = intval($_POST['edit_capacity']);
+        
+        $editDatetime = "$editDate $editTime:00";
+        
+        try {
+            $stmt = $pdo->prepare("UPDATE slots SET slot_datetime = ?, target_audience = ?, max_capacity = ? WHERE id = ?");
+            $stmt->execute([$editDatetime, $editAudience, $editCapacity, $editId]);
+            $message = $lang == 'en' ? "Slot updated successfully." : "枠を更新しました。";
+        } catch (PDOException $e) {
+            $message = ($lang == 'en' ? "Error updating slot: " : "更新エラー: ") . $e->getMessage();
+        }
+    }
+
+    // 5. Bulk Delete Slots (Selected)
     if (isset($_POST['bulk_delete_slots'])) {
         $ids = $_POST['slot_ids'] ?? [];
         if (!empty($ids)) {
@@ -423,13 +442,16 @@ $bookings = $bookingsStmt->fetchAll();
                         <th><?php echo sortLink('slot_datetime', $txt['date'] . '/' . $txt['time'], $sort, $order, $lang, $page); ?></th>
                         <th><?php echo sortLink('target_audience', $txt['audience'], $sort, $order, $lang, $page); ?></th>
                         <th><?php echo sortLink('booked_count', $txt['booked_cap'], $sort, $order, $lang, $page); ?></th>
+                        <th style="width: 80px;"><?php echo $lang == 'en' ? 'Actions' : '操作'; ?></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if(empty($futureSlots)): ?>
-                        <tr><td colspan="5" class="text-center">No future slots found.</td></tr>
+                        <tr><td colspan="6" class="text-center">No future slots found.</td></tr>
                     <?php else: ?>
-                        <?php foreach($futureSlots as $slot): ?>
+                        <?php foreach($futureSlots as $slot): 
+                            $slotDt = new DateTime($slot['slot_datetime']);
+                        ?>
                         <tr>
                             <td><input type="checkbox" name="slot_ids[]" value="<?php echo $slot['id']; ?>"></td>
                             <td><?php echo $slot['slot_datetime']; ?></td>
@@ -438,6 +460,12 @@ $bookings = $bookingsStmt->fetchAll();
                                 <span class="badge <?php echo $slot['booked_count'] >= $slot['max_capacity'] ? 'bg-danger' : 'bg-info'; ?>">
                                     <?php echo $slot['booked_count'] . '/' . $slot['max_capacity']; ?>
                                 </span>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                    onclick="openEditModal(<?php echo $slot['id']; ?>, '<?php echo $slotDt->format('Y-m-d'); ?>', '<?php echo $slotDt->format('H:i'); ?>', '<?php echo htmlspecialchars($slot['target_audience'], ENT_QUOTES); ?>', <?php echo $slot['max_capacity']; ?>)">
+                                    ✏️
+                                </button>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -542,6 +570,58 @@ $bookings = $bookingsStmt->fetchAll();
   </div>
 </div>
 
+<!-- Edit Slot Modal -->
+<div class="modal fade" id="editSlotModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post">
+        <input type="hidden" name="action" value="edit_slot">
+        <input type="hidden" name="edit_slot_id" id="editSlotId">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title"><?php echo $lang == 'en' ? 'Edit Slot' : '枠を編集'; ?></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col">
+              <label class="form-label"><?php echo $txt['date']; ?></label>
+              <input type="date" name="edit_date" id="editDate" class="form-control" required>
+            </div>
+            <div class="col">
+              <label class="form-label"><?php echo $txt['time']; ?></label>
+              <input type="time" name="edit_time" id="editTime" class="form-control" required>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col">
+              <label class="form-label"><?php echo $txt['audience']; ?></label>
+              <select name="edit_audience" id="editAudience" class="form-select">
+                <option value="Kids New">Kids New</option>
+                <option value="Kids (C)">Kids (C)</option>
+                <option value="Kids (B)">Kids (B)</option>
+                <option value="Kids (B2)">Kids (B2)</option>
+                <option value="Kids (A)">Kids (A)</option>
+                <option value="Jr. High">Jr. High</option>
+                <option value="High Sch">High Sch</option>
+                <option value="Adult (L)">Adult (L)</option>
+                <option value="Adult (H)">Adult (H)</option>
+              </select>
+            </div>
+            <div class="col">
+              <label class="form-label"><?php echo $txt['cap']; ?></label>
+              <input type="number" name="edit_capacity" id="editCapacity" class="form-control" min="1" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo $lang == 'en' ? 'Cancel' : 'キャンセル'; ?></button>
+          <button type="submit" class="btn btn-primary"><?php echo $lang == 'en' ? 'Save Changes' : '保存'; ?></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Bootstrap Bundle with Popper -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -566,6 +646,18 @@ $bookings = $bookingsStmt->fetchAll();
         for(var i=0, n=checkboxes.length;i<n;i++) {
             checkboxes[i].checked = source.checked;
         }
+    }
+
+    // Edit Slot Modal
+    function openEditModal(id, date, time, audience, capacity) {
+        document.getElementById('editSlotId').value = id;
+        document.getElementById('editDate').value = date;
+        document.getElementById('editTime').value = time;
+        document.getElementById('editAudience').value = audience;
+        document.getElementById('editCapacity').value = capacity;
+        
+        var editModal = new bootstrap.Modal(document.getElementById('editSlotModal'));
+        editModal.show();
     }
 </script>
 </html>
