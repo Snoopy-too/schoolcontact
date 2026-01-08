@@ -34,7 +34,13 @@ $csrf_token = generateCsrfToken();
                         <img src="images/logo.png" alt="School Logo" style="max-height: 150px;">
                     </div>
                     <h2 class="text-center mb-4">無料体験レッスン予約</h2>
-                    
+
+                    <div class="text-center mb-4">
+                        <a href="https://pierenglishschool.com/" target="_blank" class="btn btn-outline-info">
+                            Visit Our Website
+                        </a>
+                    </div>
+
                     <div class="progress mb-4" style="height: 5px;">
                         <div class="progress-bar" role="progressbar" style="width: 0%" id="progressBar"></div>
                     </div>
