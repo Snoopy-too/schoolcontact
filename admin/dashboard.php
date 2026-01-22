@@ -295,8 +295,8 @@ if ($page < 1) $page = 1;
 $limit = 20;
 $offset = ($page - 1) * $limit;
 
-// Count Total Future Slots
-$countStmt = $pdo->query("SELECT COUNT(*) FROM slots WHERE slot_datetime >= CURDATE()");
+// Count Total Future Slots (slots that are still bookable)
+$countStmt = $pdo->query("SELECT COUNT(*) FROM slots WHERE DATE_SUB(slot_datetime, INTERVAL deadline_hours HOUR) > NOW()");
 $totalSlots = $countStmt->fetchColumn();
 $totalPages = ceil($totalSlots / $limit);
 
@@ -305,7 +305,7 @@ $sql = "
     SELECT s.*, COUNT(b.id) as booked_count 
     FROM slots s 
     LEFT JOIN bookings b ON s.id = b.slot_id 
-    WHERE s.slot_datetime >= CURDATE()
+    WHERE DATE_SUB(s.slot_datetime, INTERVAL s.deadline_hours HOUR) > NOW()
     GROUP BY s.id
     ORDER BY $sort $order
     LIMIT :limit OFFSET :offset

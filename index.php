@@ -231,10 +231,24 @@ $csrf_token = generateCsrfToken();
                 container.empty();
                 
                 if (response.slots.length === 0) {
-                    const grade = $('#inputLevel').val();
+                    const gradeVal = $('#inputLevel').val();
+                    const jpMap = {
+                        'Kindergarten': '幼稚園',
+                        '1st Grade': '小学1年生',
+                        '2nd Grade': '小学2年生',
+                        '3rd Grade': '小学3年生',
+                        '4th Grade': '小学4年生',
+                        '5th/6th Grade': '小学5・6年生',
+                        'Jr. High': '中学生',
+                        'High School': '高校生',
+                        'Beginner': '初心者クラス',
+                        'Intermediate/Advanced': '中級・上上級クラス'
+                    };
+                    const gradeJp = jpMap[gradeVal] || gradeVal;
+                    
                     waitlistDiv.html(`
-                        <p class="mb-1 fw-bold">現在、${grade}の空き枠がありません。</p>
-                        <p class="mb-0 text-muted small">There are currently no openings for ${grade}.</p>
+                        <p class="mb-1 fw-bold">現在、${gradeJp}の空き枠がありません。</p>
+                        <p class="mb-0 text-muted small">There are currently no openings for ${gradeVal}.</p>
                     `).show();
                     return;
                 }
