@@ -85,12 +85,8 @@ $csrf_token = generateCsrfToken();
                                 <!-- Loaded via AJAX -->
                             </div>
 
-                            <div id="waitlistMessage" class="alert alert-warning mt-3" style="display:none;">
-                                <p class="mb-0 fw-bold">現在、空き枠がありません。</p>
-                                <p class="mb-0 small">空きが出次第、ご連絡いたします。このまま連絡先をご入力ください。</p>
-                                <hr>
-                                <p class="mb-0 text-muted small">There are currently no openings. We will contact you when an opening becomes available.</p>
-                                <button type="button" class="btn btn-warning mt-3 w-100" onclick="skipSlotSelection()">連絡先入力へ進む (Proceed)</button>
+                            <div id="waitlistMessage" class="alert alert-warning mt-3 text-center" style="display:none;">
+                                <!-- Populated dynamically -->
                             </div>
 
                             <div class="text-center mt-3">
@@ -235,7 +231,11 @@ $csrf_token = generateCsrfToken();
                 container.empty();
                 
                 if (response.slots.length === 0) {
-                    waitlistDiv.show();
+                    const grade = $('#inputLevel').val();
+                    waitlistDiv.html(`
+                        <p class="mb-1 fw-bold">現在、${grade}の空き枠がありません。</p>
+                        <p class="mb-0 text-muted small">There are currently no openings for ${grade}.</p>
+                    `).show();
                     return;
                 }
 
