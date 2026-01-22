@@ -24,25 +24,29 @@ if (!is_array($audiences)) {
     $audiences = [$audiences];
 }
 
-try {
-    // Determine placeholders for IN clause
-    $placeholders = str_repeat('?,', count($audiences) - 1) . '?';
-    
-    $sql = "
-        SELECT s.id, s.slot_datetime, s.target_audience, s.max_capacity, COUNT(b.id) as current_bookings
-        FROM slots s
-        LEFT JOIN bookings b ON s.id = b.slot_id
-        WHERE s.target_audience IN ($placeholders)
-          AND DATE_SUB(s.slot_datetime, INTERVAL s.deadline_hours HOUR) > NOW()
-        GROUP BY s.id
-        HAVING current_bookings < s.max_capacity
-        ORDER BY s.slot_datetime ASC
-        LIMIT 4
-    ";
+    // Construct multiple FIND_IN_SET conditions joined by OR
+    $conditions = [];
+    foreach ($audiences as $a) {
+        $conditions[] = "FIND_IN_SET(?, s.target_audience) > 0";
+    }
+    $whereClause = "(" . implode(' OR ', $conditions) . ")";
 
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($audiences);
-    $slots = $stmt->fetchAll();
+    try {
+        $sql = "
+            SELECT s.id, s.slot_datetime, s.target_audience, s.max_capacity, COUNT(b.id) as current_bookings
+            FROM slots s
+            LEFT JOIN bookings b ON s.id = b.slot_id
+            WHERE $whereClause
+              AND DATE_SUB(s.slot_datetime, INTERVAL s.deadline_hours HOUR) > NOW()
+            GROUP BY s.id
+            HAVING current_bookings < s.max_capacity
+            ORDER BY s.slot_datetime ASC
+            LIMIT 4
+        ";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($audiences);
+        $slots = $stmt->fetchAll();
 
     $formattedSlots = array_map(function($slot) {
         $dateObj = new DateTime($slot['slot_datetime']);

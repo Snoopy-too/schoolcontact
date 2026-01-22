@@ -14,7 +14,7 @@ try {
         slot_datetime DATETIME NOT NULL,
         max_capacity INT DEFAULT 1,
         deadline_hours INT DEFAULT 0,
-        target_audience VARCHAR(50) DEFAULT 'Adult (H)',
+        target_audience VARCHAR(255) DEFAULT 'Adult (H)',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )";
     $pdo->exec($sql_slots);

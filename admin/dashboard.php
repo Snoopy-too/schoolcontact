@@ -23,8 +23,10 @@ try {
         $pdo->exec("ALTER TABLE slots ADD COLUMN deadline_hours INT DEFAULT 0 AFTER max_capacity");
         error_log("Dashboard: Auto-added 'deadline_hours' column to slots table.");
     }
+    // Also ensure target_audience is long enough for multiple values
+    $pdo->exec("ALTER TABLE slots MODIFY COLUMN target_audience VARCHAR(255) DEFAULT 'Adult (H)'");
 } catch (PDOException $e) {
-    error_log("Dashboard: Could not check/add deadline_hours column: " . $e->getMessage());
+    error_log("Dashboard: Could not update slots schema: " . $e->getMessage());
 }
 
 // Auth Check
@@ -112,7 +114,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'one_off') {
         $date = $_POST['date'];
         $time = $_POST['time'];
-        $audience = $_POST['audience'];
+        $audiences = $_POST['audience'] ?? [];
+        $audience = is_array($audiences) ? implode(',', $audiences) : $audiences;
         $capacity = intval($_POST['capacity']);
         $deadline = intval($_POST['deadline_hours'] ?? 0);
         
@@ -133,7 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $end = $_POST['end_date'];
         $dayOfWeek = intval($_POST['day_of_week']); // 0=Sun, 6=Sat
         $time = $_POST['time'];
-        $audience = $_POST['audience'];
+        $audiences = $_POST['audience'] ?? [];
+        $audience = is_array($audiences) ? implode(',', $audiences) : $audiences;
         $capacity = intval($_POST['capacity']);
         $deadline = intval($_POST['deadline_hours'] ?? 0);
 
@@ -166,7 +170,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $editId = intval($_POST['edit_slot_id']);
         $editDate = $_POST['edit_date'];
         $editTime = $_POST['edit_time'];
-        $editAudience = $_POST['edit_audience'];
+        $editAudiences = $_POST['edit_audience'] ?? [];
+        $editAudience = is_array($editAudiences) ? implode(',', $editAudiences) : $editAudiences;
         $editCapacity = intval($_POST['edit_capacity']);
         $editDeadline = intval($_POST['edit_deadline_hours'] ?? 0);
         
@@ -376,18 +381,18 @@ $bookings = $bookingsStmt->fetchAll();
                         <div class="row mb-2">
                             <div class="col">
                                 <label><?php echo $txt['audience']; ?></label>
-                                <select name="audience" class="form-select">
-                                    <option value="Kids New">Kids New</option>
-                                    <option value="Kids 1st">Kids 1st</option>
-                                    <option value="Kids 2nd">Kids 2nd</option>
-                                    <option value="Kids 3rd">Kids 3rd</option>
-                                    <option value="Kids 4th">Kids 4th</option>
-                                    <option value="Kids 5-6">Kids 5-6</option>
-                                    <option value="Jr. High">Jr. High</option>
-                                    <option value="High Sch">High Sch</option>
-                                    <option value="Adult (L)">Adult (L)</option>
-                                    <option value="Adult (H)">Adult (H)</option>
-                                </select>
+                                <div class="row g-2">
+                                    <?php 
+                                    $allAudiences = ["Kids New", "Kids 1st", "Kids 2nd", "Kids 3rd", "Kids 4th", "Kids 5-6", "Jr. High", "High Sch", "Adult (L)", "Adult (H)"];
+                                    foreach($allAudiences as $a): ?>
+                                    <div class="col-6 col-sm-4 col-md-3">
+                                        <div class="form-check border rounded p-2">
+                                            <input class="form-check-input ms-0 me-2" type="checkbox" name="audience[]" value="<?php echo $a; ?>" id="ao_<?php echo str_replace([' ','(',')','.'], '', $a); ?>">
+                                            <label class="form-check-label small" for="ao_<?php echo str_replace([' ','(',')','.'], '', $a); ?>"><?php echo $a; ?></label>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
                             <div class="col">
                                 <label><?php echo $txt['cap']; ?></label>
@@ -449,18 +454,18 @@ $bookings = $bookingsStmt->fetchAll();
                         <div class="row mb-2">
                             <div class="col">
                                 <label><?php echo $txt['audience']; ?></label>
-                                <select name="audience" class="form-select">
-                                    <option value="Kids New">Kids New</option>
-                                    <option value="Kids 1st">Kids 1st</option>
-                                    <option value="Kids 2nd">Kids 2nd</option>
-                                    <option value="Kids 3rd">Kids 3rd</option>
-                                    <option value="Kids 4th">Kids 4th</option>
-                                    <option value="Kids 5-6">Kids 5-6</option>
-                                    <option value="Jr. High">Jr. High</option>
-                                    <option value="High Sch">High Sch</option>
-                                    <option value="Adult (L)">Adult (L)</option>
-                                    <option value="Adult (H)">Adult (H)</option>
-                                </select>
+                                <div class="row g-2">
+                                    <?php 
+                                    $allAudiences = ["Kids New", "Kids 1st", "Kids 2nd", "Kids 3rd", "Kids 4th", "Kids 5-6", "Jr. High", "High Sch", "Adult (L)", "Adult (H)"];
+                                    foreach($allAudiences as $a): ?>
+                                    <div class="col-6 col-sm-4 col-md-3">
+                                        <div class="form-check border rounded p-2">
+                                            <input class="form-check-input ms-0 me-2" type="checkbox" name="audience[]" value="<?php echo $a; ?>" id="ar_<?php echo str_replace([' ','(',')','.'], '', $a); ?>">
+                                            <label class="form-check-label small" for="ar_<?php echo str_replace([' ','(',')','.'], '', $a); ?>"><?php echo $a; ?></label>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
                             <div class="col">
                                 <label><?php echo $txt['cap']; ?></label>
@@ -532,7 +537,13 @@ $bookings = $bookingsStmt->fetchAll();
                                 ];
                                 echo $days[$lang][$slotDt->format('w')]; 
                             ?></td>
-                            <td><?php echo $slot['target_audience']; ?></td>
+                            <td><?php 
+                                // Format multiple audiences for display
+                                $auds = explode(',', $slot['target_audience']);
+                                foreach($auds as $a) {
+                                    echo '<span class="badge bg-light text-dark border me-1">' . htmlspecialchars($a) . '</span>';
+                                }
+                            ?></td>
                             <td>
                                 <span class="badge <?php echo $slot['booked_count'] >= $slot['max_capacity'] ? 'bg-danger' : 'bg-info'; ?>">
                                     <?php echo $slot['booked_count'] . '/' . $slot['max_capacity']; ?>
@@ -685,27 +696,25 @@ $bookings = $bookingsStmt->fetchAll();
             </div>
           </div>
           <div class="row mb-3">
-            <div class="col">
-              <label class="form-label"><?php echo $txt['audience']; ?></label>
-              <select name="edit_audience" id="editAudience" class="form-select">
-                <option value="Kids New">Kids New</option>
-                <option value="Kids 1st">Kids 1st</option>
-                <option value="Kids 2nd">Kids 2nd</option>
-                <option value="Kids 3rd">Kids 3rd</option>
-                <option value="Kids 4th">Kids 4th</option>
-                <option value="Kids 5-6">Kids 5-6</option>
-                <option value="Jr. High">Jr. High</option>
-                <option value="High Sch">High Sch</option>
-                <option value="Adult (L)">Adult (L)</option>
-                <option value="Adult (H)">Adult (H)</option>
-              </select>
+            <div class="col-12">
+              <label class="form-label fw-bold"><?php echo $txt['audience']; ?></label>
+              <div class="row g-2">
+                <?php foreach($allAudiences as $a): ?>
+                <div class="col-6 col-sm-4">
+                  <div class="form-check border rounded p-2">
+                    <input class="form-check-input ms-0 me-2 edit-audience-check" type="checkbox" name="edit_audience[]" value="<?php echo $a; ?>" id="ae_<?php echo str_replace([' ','(',')','.'], '', $a); ?>">
+                    <label class="form-check-label small" for="ae_<?php echo str_replace([' ','(',')','.'], '', $a); ?>"><?php echo $a; ?></label>
+                  </div>
+                </div>
+                <?php endforeach; ?>
+              </div>
             </div>
+          </div>
+          <div class="row mb-3">
             <div class="col">
               <label class="form-label"><?php echo $txt['cap']; ?></label>
               <input type="number" name="edit_capacity" id="editCapacity" class="form-control" min="1" required>
             </div>
-          </div>
-          <div class="row mb-3">
             <div class="col">
               <label class="form-label"><?php echo $txt['deadline']; ?></label>
               <div class="input-group">
@@ -818,7 +827,12 @@ $bookings = $bookingsStmt->fetchAll();
         document.getElementById('editDate')._flatpickr.setDate(date);
         document.getElementById('editTime')._flatpickr.setDate(time);
         
-        document.getElementById('editAudience').value = audience;
+        // Handle multi-audience checkboxes
+        const auds = audience.split(',');
+        document.querySelectorAll('.edit-audience-check').forEach(cb => {
+            cb.checked = auds.includes(cb.value);
+        });
+        
         document.getElementById('editCapacity').value = capacity;
         document.getElementById('editDeadlineHours').value = deadline;
         
