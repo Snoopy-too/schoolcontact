@@ -32,12 +32,13 @@ if (!is_array($audiences)) {
     $whereClause = "(" . implode(' OR ', $conditions) . ")";
 
     try {
+        $now = date('Y-m-d H:i:s');
         $sql = "
             SELECT s.id, s.slot_datetime, s.target_audience, s.max_capacity, COUNT(b.id) as current_bookings
             FROM slots s
             LEFT JOIN bookings b ON s.id = b.slot_id
             WHERE $whereClause
-              AND DATE_SUB(s.slot_datetime, INTERVAL s.deadline_hours HOUR) > NOW()
+              AND DATE_SUB(s.slot_datetime, INTERVAL s.deadline_hours HOUR) > ?
             GROUP BY s.id
             HAVING current_bookings < s.max_capacity
             ORDER BY s.slot_datetime ASC
@@ -45,7 +46,9 @@ if (!is_array($audiences)) {
         ";
 
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($audiences);
+        // We need to merge audiences and the 'now' parameter
+        $params = array_merge($audiences, [$now]);
+        $stmt->execute($params);
         $slots = $stmt->fetchAll();
 
     $formattedSlots = array_map(function($slot) {
