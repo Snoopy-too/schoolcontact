@@ -328,6 +328,8 @@ $bookings = $bookingsStmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Flatpickr for better Date/Time UX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 <body class="bg-light">
 
@@ -724,7 +726,31 @@ $bookings = $bookingsStmt->fetchAll();
 
 <!-- Bootstrap Bundle with Popper -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Flatpickr -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ja.js"></script>
 <script>
+    // Initialize Flatpickr
+    const commonConfig = {
+        locale: "<?php echo $lang == 'jp' ? 'ja' : 'en'; ?>",
+        disableMobile: "true" // Force flatpickr on mobile for consistent UX
+    };
+
+    const datePickers = flatpickr("input[type=date]", {
+        ...commonConfig,
+        dateFormat: "Y-m-d",
+        allowInput: true
+    });
+
+    const timePickers = flatpickr("input[type=time]", {
+        ...commonConfig,
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true,
+        allowInput: true
+    });
+
     let formToSubmit = null;
 
     function showConfirmModal(button, message) {
@@ -787,8 +813,11 @@ $bookings = $bookingsStmt->fetchAll();
     // Edit Slot Modal
     function openEditModal(id, date, time, audience, capacity, deadline) {
         document.getElementById('editSlotId').value = id;
-        document.getElementById('editDate').value = date;
-        document.getElementById('editTime').value = time;
+        
+        // Update Flatpickr instances for the edit modal
+        document.getElementById('editDate')._flatpickr.setDate(date);
+        document.getElementById('editTime')._flatpickr.setDate(time);
+        
         document.getElementById('editAudience').value = audience;
         document.getElementById('editCapacity').value = capacity;
         document.getElementById('editDeadlineHours').value = deadline;
