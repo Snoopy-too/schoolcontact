@@ -33,7 +33,7 @@ try {
         FROM slots s
         LEFT JOIN bookings b ON s.id = b.slot_id
         WHERE s.target_audience IN ($placeholders)
-          AND s.slot_datetime > NOW()
+          AND DATE_SUB(s.slot_datetime, INTERVAL s.deadline_hours HOUR) > NOW()
         GROUP BY s.id
         HAVING current_bookings < s.max_capacity
         ORDER BY s.slot_datetime ASC

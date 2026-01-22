@@ -16,6 +16,17 @@ try {
     error_log("Dashboard: Could not check/add phone column: " . $e->getMessage());
 }
 
+// Auto-migrate: Add deadline_hours column if it doesn't exist
+try {
+    $checkDeadline = $pdo->query("SHOW COLUMNS FROM slots LIKE 'deadline_hours'");
+    if ($checkDeadline->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE slots ADD COLUMN deadline_hours INT DEFAULT 0 AFTER max_capacity");
+        error_log("Dashboard: Auto-added 'deadline_hours' column to slots table.");
+    }
+} catch (PDOException $e) {
+    error_log("Dashboard: Could not check/add deadline_hours column: " . $e->getMessage());
+}
+
 // Auth Check
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     header("Location: login.php");
@@ -52,6 +63,7 @@ $t = [
         'bulk_delete' => 'Delete Selected',
         'day' => 'Day',
         'booked_cap' => 'Booked/Cap',
+        'deadline' => 'Deadline (hrs before)',
         'clear_all' => 'Clear All',
         'confirm_clear_slots' => 'WARNING: This will delete ALL future slots AND their associated bookings. This cannot be undone. Are you sure?',
         'confirm_clear_bookings' => 'WARNING: This will delete ALL bookings history. This cannot be undone. Are you sure?'
@@ -83,6 +95,7 @@ $t = [
         'bulk_delete' => '選択した項目を削除',
         'day' => '曜日',
         'booked_cap' => '予約/定員',
+        'deadline' => '締切(時間前)',
         'clear_all' => '全て削除',
         'confirm_clear_slots' => '警告：すべての将来の枠とそれに関連する予約を削除します。この操作は取り消せません。よろしいですか？',
         'confirm_clear_bookings' => '警告：すべての予約履歴を削除します。この操作は取り消せません。よろしいですか？'
@@ -101,12 +114,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $time = $_POST['time'];
         $audience = $_POST['audience'];
         $capacity = intval($_POST['capacity']);
+        $deadline = intval($_POST['deadline_hours'] ?? 0);
         
         $datetime = "$date $time:00";
         
         try {
-            $stmt = $pdo->prepare("INSERT INTO slots (slot_datetime, target_audience, max_capacity) VALUES (?, ?, ?)");
-            $stmt->execute([$datetime, $audience, $capacity]);
+            $stmt = $pdo->prepare("INSERT INTO slots (slot_datetime, target_audience, max_capacity, deadline_hours) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$datetime, $audience, $capacity, $deadline]);
             $message = $txt['generated'];
         } catch (PDOException $e) {
             $message = $txt['error'] . ' ' . $e->getMessage();
@@ -121,6 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $time = $_POST['time'];
         $audience = $_POST['audience'];
         $capacity = intval($_POST['capacity']);
+        $deadline = intval($_POST['deadline_hours'] ?? 0);
 
         $startDate = new DateTime($start);
         $endDate = new DateTime($end);
@@ -129,14 +144,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $period = new DatePeriod($startDate, new DateInterval('P1D'), $endDate);
         
         $count = 0;
-        $sql = "INSERT INTO slots (slot_datetime, target_audience, max_capacity) VALUES (?, ?, ?)";
+        $sql = "INSERT INTO slots (slot_datetime, target_audience, max_capacity, deadline_hours) VALUES (?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
 
         foreach ($period as $dt) {
             if ($dt->format('w') == $dayOfWeek) {
                 $datetime = $dt->format('Y-m-d') . " $time:00";
                 try {
-                    $stmt->execute([$datetime, $audience, $capacity]);
+                    $stmt->execute([$datetime, $audience, $capacity, $deadline]);
                     $count++;
                 } catch (Exception $e) {
                     // Ignore
@@ -153,12 +168,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $editTime = $_POST['edit_time'];
         $editAudience = $_POST['edit_audience'];
         $editCapacity = intval($_POST['edit_capacity']);
+        $editDeadline = intval($_POST['edit_deadline_hours'] ?? 0);
         
         $editDatetime = "$editDate $editTime:00";
         
         try {
-            $stmt = $pdo->prepare("UPDATE slots SET slot_datetime = ?, target_audience = ?, max_capacity = ? WHERE id = ?");
-            $stmt->execute([$editDatetime, $editAudience, $editCapacity, $editId]);
+            $stmt = $pdo->prepare("UPDATE slots SET slot_datetime = ?, target_audience = ?, max_capacity = ?, deadline_hours = ? WHERE id = ?");
+            $stmt->execute([$editDatetime, $editAudience, $editCapacity, $editDeadline, $editId]);
             $message = $lang == 'en' ? "Slot updated successfully." : "枠を更新しました。";
         } catch (PDOException $e) {
             $message = ($lang == 'en' ? "Error updating slot: " : "更新エラー: ") . $e->getMessage();
@@ -376,6 +392,15 @@ $bookings = $bookingsStmt->fetchAll();
                                 <input type="number" name="capacity" class="form-control" value="6">
                             </div>
                         </div>
+                        <div class="row mb-2">
+                            <div class="col">
+                                <label><?php echo $txt['deadline']; ?></label>
+                                <div class="input-group">
+                                    <input type="number" name="deadline_hours" class="form-control" value="0">
+                                    <span class="input-group-text">hrs</span>
+                                </div>
+                            </div>
+                        </div>
                         <button type="submit" class="btn btn-primary w-100"><?php echo $txt['create']; ?></button>
                     </form>
                 </div>
@@ -440,6 +465,15 @@ $bookings = $bookingsStmt->fetchAll();
                                 <input type="number" name="capacity" class="form-control" value="6">
                             </div>
                         </div>
+                        <div class="row mb-2">
+                            <div class="col">
+                                <label><?php echo $txt['deadline']; ?></label>
+                                <div class="input-group">
+                                    <input type="number" name="deadline_hours" class="form-control" value="0">
+                                    <span class="input-group-text">hrs</span>
+                                </div>
+                            </div>
+                        </div>
                         <button type="submit" class="btn btn-success w-100"><?php echo $txt['create']; ?> (Generate)</button>
                     </form>
                 </div>
@@ -475,6 +509,7 @@ $bookings = $bookingsStmt->fetchAll();
                         <th><?php echo $txt['day']; ?></th>
                         <th><?php echo sortLink('target_audience', $txt['audience'], $sort, $order, $lang, $page); ?></th>
                         <th><?php echo sortLink('booked_count', $txt['booked_cap'], $sort, $order, $lang, $page); ?></th>
+                        <th><?php echo $txt['deadline']; ?></th>
                         <th style="width: 100px;"><?php echo $lang == 'en' ? 'Actions' : '操作'; ?></th>
                     </tr>
                 </thead>
@@ -501,10 +536,11 @@ $bookings = $bookingsStmt->fetchAll();
                                     <?php echo $slot['booked_count'] . '/' . $slot['max_capacity']; ?>
                                 </span>
                             </td>
+                            <td><?php echo $slot['deadline_hours']; ?>h</td>
                             <td>
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-sm btn-outline-primary" 
-                                        onclick="openEditModal(<?php echo $slot['id']; ?>, '<?php echo $slotDt->format('Y-m-d'); ?>', '<?php echo $slotDt->format('H:i'); ?>', '<?php echo htmlspecialchars($slot['target_audience'], ENT_QUOTES); ?>', <?php echo $slot['max_capacity']; ?>)">
+                                        onclick="openEditModal(<?php echo $slot['id']; ?>, '<?php echo $slotDt->format('Y-m-d'); ?>', '<?php echo $slotDt->format('H:i'); ?>', '<?php echo htmlspecialchars($slot['target_audience'], ENT_QUOTES); ?>', <?php echo $slot['max_capacity']; ?>, <?php echo $slot['deadline_hours']; ?>)">
                                         ✏️
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger" 
@@ -667,6 +703,15 @@ $bookings = $bookingsStmt->fetchAll();
               <input type="number" name="edit_capacity" id="editCapacity" class="form-control" min="1" required>
             </div>
           </div>
+          <div class="row mb-3">
+            <div class="col">
+              <label class="form-label"><?php echo $txt['deadline']; ?></label>
+              <div class="input-group">
+                <input type="number" name="edit_deadline_hours" id="editDeadlineHours" class="form-control" min="0" required>
+                <span class="input-group-text">hrs</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php echo $lang == 'en' ? 'Cancel' : 'キャンセル'; ?></button>
@@ -740,12 +785,13 @@ $bookings = $bookingsStmt->fetchAll();
     }
 
     // Edit Slot Modal
-    function openEditModal(id, date, time, audience, capacity) {
+    function openEditModal(id, date, time, audience, capacity, deadline) {
         document.getElementById('editSlotId').value = id;
         document.getElementById('editDate').value = date;
         document.getElementById('editTime').value = time;
         document.getElementById('editAudience').value = audience;
         document.getElementById('editCapacity').value = capacity;
+        document.getElementById('editDeadlineHours').value = deadline;
         
         var editModal = new bootstrap.Modal(document.getElementById('editSlotModal'));
         editModal.show();

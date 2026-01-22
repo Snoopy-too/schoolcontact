@@ -1,6 +1,7 @@
 <?php
 // config.php
 // Manually created with live credentials
+date_default_timezone_set('Asia/Tokyo');
 
 // Database Configuration
 $host = 'localhost';
@@ -14,6 +15,9 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     // Set default fetch mode to associative array
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+
+    // Set MySQL timezone to JST
+    $pdo->exec("SET time_zone = '+09:00';");
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }

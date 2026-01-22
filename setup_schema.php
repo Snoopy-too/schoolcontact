@@ -13,6 +13,7 @@ try {
         id INT AUTO_INCREMENT PRIMARY KEY,
         slot_datetime DATETIME NOT NULL,
         max_capacity INT DEFAULT 1,
+        deadline_hours INT DEFAULT 0,
         target_audience VARCHAR(50) DEFAULT 'Adult (H)',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )";

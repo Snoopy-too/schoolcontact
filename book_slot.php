@@ -61,7 +61,7 @@ try {
     // If there is a slot_id, check capacity and get datetime
     if ($slot_id) {
         $stmt = $pdo->prepare("
-            SELECT s.slot_datetime, s.max_capacity, COUNT(b.id) as current_bookings
+            SELECT s.slot_datetime, s.max_capacity, s.deadline_hours, COUNT(b.id) as current_bookings
             FROM slots s
             LEFT JOIN bookings b ON s.id = b.slot_id
             WHERE s.id = :id
@@ -72,6 +72,15 @@ try {
 
         if (!$slot) {
             throw new Exception('Slot not found');
+        }
+
+        // Deadline Check
+        $slotDt = new DateTime($slot['slot_datetime']);
+        $deadlineHours = intval($slot['deadline_hours'] ?? 0);
+        $deadlineTs = $slotDt->getTimestamp() - ($deadlineHours * 3600);
+        
+        if (time() > $deadlineTs) {
+            throw new Exception('The booking deadline for this slot has passed.');
         }
 
         if ($slot['current_bookings'] >= $slot['max_capacity']) {
