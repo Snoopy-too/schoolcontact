@@ -295,10 +295,8 @@ if ($page < 1) $page = 1;
 $limit = 20;
 $offset = ($page - 1) * $limit;
 
-// Count Total Future Slots (slots that are still bookable)
-$now = date('Y-m-d H:i:s');
-$countStmt = $pdo->prepare("SELECT COUNT(*) FROM slots WHERE DATE_SUB(slot_datetime, INTERVAL deadline_hours HOUR) > ?");
-$countStmt->execute([$now]);
+// Count Total Future Slots (slots that are still bookable) using JST (UTC+9)
+$countStmt = $pdo->query("SELECT COUNT(*) FROM slots WHERE DATE_SUB(slot_datetime, INTERVAL deadline_hours HOUR) > DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)");
 $totalSlots = $countStmt->fetchColumn();
 $totalPages = ceil($totalSlots / $limit);
 
@@ -307,7 +305,7 @@ $sql = "
     SELECT s.*, COUNT(b.id) as booked_count 
     FROM slots s 
     LEFT JOIN bookings b ON s.id = b.slot_id 
-    WHERE DATE_SUB(s.slot_datetime, INTERVAL s.deadline_hours HOUR) > :now
+    WHERE DATE_SUB(s.slot_datetime, INTERVAL s.deadline_hours HOUR) > DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)
     GROUP BY s.id
     ORDER BY $sort $order
     LIMIT :limit OFFSET :offset
@@ -315,7 +313,6 @@ $sql = "
 $slotsStmt = $pdo->prepare($sql);
 $slotsStmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $slotsStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-$slotsStmt->bindValue(':now', $now);
 $slotsStmt->execute();
 $futureSlots = $slotsStmt->fetchAll();
 
